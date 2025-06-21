@@ -41,8 +41,28 @@ function InventoryManagement({ styles, onInventoryUpdate }) {
   ];
 
   useEffect(() => {
-    loadInventory()
-  }, [])
+    // Initial load of the inventory data
+    loadInventory();
+
+    // Set up the real-time subscription
+    const channel = supabase
+      .channel('inventory_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'inventory' },
+        (payload) => {
+          console.log('Change received!', payload);
+          // When a change is detected, re-fetch the data
+          loadInventory();
+        }
+      )
+      .subscribe();
+
+    // Cleanup function to remove the subscription when the component unmounts
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const loadInventory = async () => {
     setLoading(true)
